@@ -15,6 +15,7 @@ def fetch_db(conn: object, code: str, location: str, valid: bool):
     """make sql query based on cam_code and time and location"""
     df = pd.DataFrame(result, columns=colnames)
     df['unix_t'] = df['file_name'].apply(lambda x: x.split('-')[-1])
+    df.sort_values(by='unix_t', ascending=False, inplace=True)
 
     """Insert Query"""
     begin_time, end_time = df.unix_t.min(), df.unix_t.max()
@@ -22,7 +23,7 @@ def fetch_db(conn: object, code: str, location: str, valid: bool):
         ('{location}_{code}', {begin_time}, {end_time}, (SELECT location_id from locations WHERE location='{location}') );"
     
     """Upate Query"""
-    ids = tuple(df['id'].to_list())
+    ids = tuple(df['id'].to_list()[:-1]) # Leave the last image because of the unavailable error at home assistant
     
     if valid is True:
         """
