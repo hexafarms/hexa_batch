@@ -1,6 +1,6 @@
 import pandas as pd
 
-def fetch_db(conn: object, code: str, location: str):
+def fetch_db(conn: object, code: str, location: str, valid: bool):
     """Fetch data from db"""
     # Open a cursor to perform database operations
     cur = conn.cursor()
@@ -23,9 +23,17 @@ def fetch_db(conn: object, code: str, location: str):
     
     """Upate Query"""
     ids = tuple(df['id'].to_list())
-    query_u = f"UPDATE top_view SET batch_id = (SELECT batch_id FROM batchs WHERE begin_time={begin_time} AND end_time={end_time} AND code LIKE '%{code}%') \
-        WHERE id in {ids};"
     
+    if valid is True:
+        """
+        If the batch is unnucessary to be updated. 
+        For example, time after harvest and before transplant
+        """
+        query_u = f"UPDATE top_view SET batch_id = (SELECT batch_id FROM batchs WHERE begin_time={begin_time} AND end_time={end_time} AND code LIKE '%{code}%') \
+            WHERE id in {ids};"
+    else:
+        query_u = f"UPDATE top_view SET batch_id = 0 WHERE id in {ids};"
+
     return query_i, query_u
 
 
