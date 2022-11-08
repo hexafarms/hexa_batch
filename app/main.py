@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 import psycopg2
 from .database import update_db, fetch_db
+from .compute import compute_left_days
 import yaml
 
 with open('credential/hexa.yaml', 'r') as stream:
@@ -10,7 +11,32 @@ app = FastAPI()
 
 @app.get("/")
 async def root():
-    return {"Guide": "Type {address}/{batch_done|batch_start}/{location}/{cam_code"}
+    return {"Guide": "Type {address}/{batch_done|batch_start}/{location}/{cam_code}"}
+
+
+@app.get("/predict_harvest/{location}/{cam_code}")
+async def predict_harvest(cam_code: str, location: str, begin_grow_state:float | None = 28.0, full_grow_cycle:float | None = 5.0):
+    # Update predict_harvest
+    # Connect to your postgres DB
+    conn = psycopg2.connect(
+        f"dbname={setup['dbname']} user={setup['user']} host={setup['host']} password={setup['password']}"
+        )
+    conn.set_session(readonly=False)
+
+    #TODO: compute full_grow_cycle based on the species
+    #TODO: compute begin_grow_state based on the area
+    
+    left_days = compute_left_days(conn, cam_code, location)
+
+    # Update left_days of the most recent harvest prediction.
+    query_predict_harvest = f"UPDATE predict_harvest SET full_grow_cycle = {full_grow_cycle}, begin_grow_state = {begin_grow_state}, \
+left_days = {left_days} WHERE location_id = (SELECT location_id FROM locations WHERE location = {location}) AND cam_code = {cam_code} AND \
+begin_grow = (SELECT begin_grow FROM predict_harvest WHERE location_id = (SELECT location_id FROM locations WHERE location = {location}) \
+AND cam_code = {cam_code} ORDER BY begin_grow DESC LIMIT 1);"
+
+    result_predict_harvest = update_db(conn, query_predict_harvest)
+    return {'state': 'successful', 'return after update_harvest': result_predict_harvest}
+
 
 @app.get("/batch_done/{location}/{cam_code}")
 async def create_item(cam_code: str, location: str):
@@ -19,6 +45,8 @@ async def create_item(cam_code: str, location: str):
         f"dbname={setup['dbname']} user={setup['user']} host={setup['host']} password={setup['password']}"
         )
     conn.set_session(readonly=False)
+
+    # Allocate batch
     query_i, query_u  = fetch_db(conn, cam_code, location, valid=True)
     result_i = update_db(conn, query_i)
     result_u = update_db(conn, query_u)
@@ -26,6 +54,7 @@ async def create_item(cam_code: str, location: str):
         
     return {'state': 'successful', 'return after insert': result_i, 'return after update': result_u}
 
+# additional parameters: full grow cycle & begin grow state
 @app.get("/batch_start/{location}/{cam_code}")
 async def create_item(cam_code: str, location: str):
     # Connect to your postgres DB
@@ -33,11 +62,18 @@ async def create_item(cam_code: str, location: str):
         f"dbname={setup['dbname']} user={setup['user']} host={setup['host']} password={setup['password']}"
         )
     conn.set_session(readonly=False)
+
+    # Allocate batch (Ignore data after harvest and before transplat.)
     _, query_u  = fetch_db(conn, cam_code, location, valid=False)
-    result_u = update_db(conn, query_u)
+    result_batch = update_db(conn, query_u)
     conn.commit()
+
+    query_predict_harvest = f"INSERT INTO predict_harvest(location_id, cam_code) \
+VALUES ((SELECT location_id FROM locations WHERE location = {location}),{cam_code});"
+    result_predict_harvest = update_db(conn, query_predict_harvest)
         
-    return {'state': 'successful', 'return after update': result_u}
+    return {'state': 'successful', 'return after update_batch': result_batch, 'return after update_harvest': result_predict_harvest}
+
 
 if __name__ == "__main__":
     conn = psycopg2.connect("dbname={setup['dbname']} user={setup['user']} host={setup['host']} password={setup['password']}")

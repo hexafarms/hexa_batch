@@ -40,9 +40,23 @@ def fetch_db(conn: object, code: str, location: str, valid: bool):
 
 def update_db(conn: object, query: str):
     """Update batch data to db"""
-    """
-    Enter the now() --> any images unassigned to batch with same cam-code is assigned to this batch.
-    """
     with conn.cursor() as curs:
         curs.execute(query)
     return curs.statusmessage
+
+def fetch_db_begin_grow(conn: object, cam_code: str, location: str):
+    """Fetch data from db"""
+    # Open a cursor to perform database operations
+    cur = conn.cursor()
+    # Execute a query
+    query_begin_grow = f"SELECT begin_grow, full_grow_cycle FROM predict_harvest WHERE location_id = (SELECT location_id FROM locations WHERE location = {location}) AND cam_code = {cam_code} AND \
+begin_grow = (SELECT begin_grow FROM predict_harvest WHERE location_id = (SELECT location_id FROM locations WHERE location = {location}) \
+AND cam_code = {cam_code} ORDER BY begin_grow DESC LIMIT 1);"
+    
+    cur.execute(query_begin_grow)
+
+    # Retrieve query results
+    result = cur.fetchall()
+
+    begin_grow, full_grow_cycle = result
+    return begin_grow, full_grow_cycle  
