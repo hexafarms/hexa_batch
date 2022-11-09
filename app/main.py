@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 import psycopg2
-from database import update_db, fetch_db_query, fetch_db_grow_id
-from compute import compute_left_days
+from app.database import update_db, fetch_db_query, fetch_db_grow_id
+from app.compute import compute_left_days
 import yaml
 
 with open('credential/hexa.yaml', 'r') as stream:

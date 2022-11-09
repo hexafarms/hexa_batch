@@ -1,5 +1,5 @@
 import datetime
-from database import fetch_db_begin_grow
+from app.database import fetch_db_begin_grow
 
 def compute_left_days(conn: object, cam_code: str, location: str):
     # TODO: User more information such as area, species, health, ...
