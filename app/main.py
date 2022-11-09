@@ -15,7 +15,7 @@ async def root():
 
 
 @app.get("/predict_harvest/{location}/{cam_code}")
-async def predict_harvest(cam_code: str, location: str, begin_grow_state:float | None = 4.0, full_grow_cycle:float | None = 28.0):
+async def predict_harvest(cam_code: str, location: str, begin_grow_state:float|None, full_grow_cycle:float|None ):
     # Update predict_harvest
     # Connect to your postgres DB
     conn = psycopg2.connect(
@@ -31,8 +31,21 @@ async def predict_harvest(cam_code: str, location: str, begin_grow_state:float |
     grow_id = fetch_db_grow_id(conn, cam_code, location)
 
     # Update left_days of the most recent harvest prediction.
-    query_predict_harvest = f"UPDATE predict_harvest SET full_grow_cycle={full_grow_cycle}, begin_grow_state={begin_grow_state}, \
-left_days={left_days} WHERE grow_id={grow_id};"
+    if begin_grow_state is not None and full_grow_cycle is not None:
+        query_predict_harvest = f"UPDATE predict_harvest SET full_grow_cycle={full_grow_cycle}, begin_grow_state={begin_grow_state}, \
+    left_days={left_days} WHERE grow_id={grow_id};"
+
+    elif begin_grow_state is None and full_grow_cycle is not None:
+        query_predict_harvest = f"UPDATE predict_harvest SET full_grow_cycle={full_grow_cycle}, \
+    left_days={left_days} WHERE grow_id={grow_id};"
+
+    elif begin_grow_state is not None and full_grow_cycle is None:
+        query_predict_harvest = f"UPDATE predict_harvest SET begin_grow_state={begin_grow_state}, \
+    left_days={left_days} WHERE grow_id={grow_id};"
+
+    else:
+        query_predict_harvest = f"UPDATE predict_harvest SET \
+    left_days={left_days} WHERE grow_id={grow_id};"
 
     result_predict_harvest = update_db(conn, query_predict_harvest)
     return {'state': 'successful', 'return after update_harvest': result_predict_harvest, 'value':left_days}
