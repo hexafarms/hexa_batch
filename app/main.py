@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 import psycopg2
-from .database import update_db, fetch_db
+from .database import update_db, fetch_db, fetch_db_begin_grow, fetch_db_grow_id
 from .compute import compute_left_days
 import yaml
 
@@ -15,7 +15,7 @@ async def root():
 
 
 @app.get("/predict_harvest/{location}/{cam_code}")
-async def predict_harvest(cam_code: str, location: str, begin_grow_state:float | None = 28.0, full_grow_cycle:float | None = 5.0):
+async def predict_harvest(cam_code: str, location: str, begin_grow_state:float | None = 4.0, full_grow_cycle:float | None = 28.0):
     # Update predict_harvest
     # Connect to your postgres DB
     conn = psycopg2.connect(
@@ -28,11 +28,13 @@ async def predict_harvest(cam_code: str, location: str, begin_grow_state:float |
     
     left_days = compute_left_days(conn, cam_code, location)
 
+    begin_grow, _ = fetch_db_begin_grow(conn, cam_code, location)
+
+    grow_id = fetch_db_grow_id(conn, cam_code, location)
+
     # Update left_days of the most recent harvest prediction.
-    query_predict_harvest = f"UPDATE predict_harvest SET full_grow_cycle = {full_grow_cycle}, begin_grow_state = {begin_grow_state}, \
-left_days = {left_days} WHERE location_id = (SELECT location_id FROM locations WHERE location = {location}) AND cam_code = {cam_code} AND \
-begin_grow = (SELECT begin_grow FROM predict_harvest WHERE location_id = (SELECT location_id FROM locations WHERE location = {location}) \
-AND cam_code = {cam_code} ORDER BY begin_grow DESC LIMIT 1);"
+    query_predict_harvest = f"UPDATE predict_harvest SET full_grow_cycle={full_grow_cycle}, begin_grow_state={begin_grow_state}, \
+left_days={left_days} WHERE grow_id={grow_id};"
 
     result_predict_harvest = update_db(conn, query_predict_harvest)
     return {'state': 'successful', 'return after update_harvest': result_predict_harvest}
@@ -69,16 +71,17 @@ async def create_item(cam_code: str, location: str):
     conn.commit()
 
     query_predict_harvest = f"INSERT INTO predict_harvest(location_id, cam_code) \
-VALUES ((SELECT location_id FROM locations WHERE location = {location}),{cam_code});"
+VALUES ((SELECT location_id FROM locations WHERE location = '{location}'),'{cam_code}');"
     result_predict_harvest = update_db(conn, query_predict_harvest)
         
     return {'state': 'successful', 'return after update_batch': result_batch, 'return after update_harvest': result_predict_harvest}
 
 
 if __name__ == "__main__":
-    conn = psycopg2.connect("dbname={setup['dbname']} user={setup['user']} host={setup['host']} password={setup['password']}")
+    with open('credential/hexa.yaml', 'r') as stream:
+        setup = yaml.safe_load(stream)
+
+    conn = psycopg2.connect(f"dbname={setup['dbname']} user={setup['user']} host={setup['host']} password={setup['password']}")
     conn.set_session(readonly=False)
-    query_i, query_u  = fetch_db(conn, 'G8T1-9400-0301-04R7', 'techstars')
-    update_db(conn, query_i)
-    update_db(conn, query_u)
+    predict_harvest(conn, 'test_code', 'techstars')
     conn.commit()

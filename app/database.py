@@ -44,19 +44,40 @@ def update_db(conn: object, query: str):
         curs.execute(query)
     return curs.statusmessage
 
+
+def fetch_db_grow_id(conn, cam_code, location):
+    """Fetch the most recent grow id from db """
+
+    # Open a cursor to perform database operations
+    cur = conn.cursor()
+    # Execute a query
+    query_grow_id = f"SELECT grow_id FROM predict_harvest \
+    WHERE begin_grow = (SELECT max(begin_grow) FROM predict_harvest WHERE \
+    location_id = (SELECT location_id FROM locations WHERE location = '{location}') AND \
+    cam_code = '{cam_code}');"
+    
+    cur.execute(query_grow_id)
+
+    # Retrieve query results
+    result = cur.fetchall()
+
+    grow_id = result[0][0]
+    return grow_id  
+
+
 def fetch_db_begin_grow(conn: object, cam_code: str, location: str):
     """Fetch data from db"""
     # Open a cursor to perform database operations
     cur = conn.cursor()
     # Execute a query
-    query_begin_grow = f"SELECT begin_grow, full_grow_cycle FROM predict_harvest WHERE location_id = (SELECT location_id FROM locations WHERE location = {location}) AND cam_code = {cam_code} AND \
-begin_grow = (SELECT begin_grow FROM predict_harvest WHERE location_id = (SELECT location_id FROM locations WHERE location = {location}) \
-AND cam_code = {cam_code} ORDER BY begin_grow DESC LIMIT 1);"
+    query_begin_grow = f"SELECT begin_grow, full_grow_cycle FROM predict_harvest WHERE location_id = (SELECT location_id FROM locations WHERE location = '{location}') AND cam_code = '{cam_code}' AND \
+begin_grow = (SELECT begin_grow FROM predict_harvest WHERE location_id = (SELECT location_id FROM locations WHERE location = '{location}') \
+AND cam_code = '{cam_code}' ORDER BY begin_grow DESC LIMIT 1);"
     
     cur.execute(query_begin_grow)
 
     # Retrieve query results
     result = cur.fetchall()
 
-    begin_grow, full_grow_cycle = result
+    begin_grow, full_grow_cycle = result[0]
     return begin_grow, full_grow_cycle  
