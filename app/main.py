@@ -67,6 +67,8 @@ async def create_item(cam_code: str, location: str):
 
     if query_u is not None:
         result_batch = update_db(conn, query_u)
+    else:
+        result_batch = "Skip update. Only insert predict_harvest."
 
     query_predict_harvest = f"INSERT INTO predict_harvest(location_id, cam_code) \
 VALUES ((SELECT location_id FROM locations WHERE location = '{location}'),'{cam_code}');"
