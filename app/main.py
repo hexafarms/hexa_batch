@@ -15,7 +15,7 @@ async def root():
 
 
 @app.get("/predict_harvest/{location}/{cam_code}")
-async def predict_harvest(cam_code: str, location: str, begin_grow_state:float|None, full_grow_cycle:float|None ):
+async def predict_harvest(cam_code: str, location: str, begin_grow_state:float|None = None, full_grow_cycle:float|None = None ):
     # Update predict_harvest
     # Connect to your postgres DB
     conn = psycopg2.connect(
