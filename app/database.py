@@ -6,8 +6,8 @@ def fetch_db_query(conn: object, code: str, location: str, valid: bool):
     cur = conn.cursor()
     # Execute a query
     cur.execute(f"SELECT * FROM top_view WHERE batch_id is NULL AND location = \
-                (SELECT location_id from locations WHERE location='{location}') AND \
-                    file_name LIKE '%{code}%';")
+(SELECT location_id from locations WHERE location='{location}') AND \
+file_name LIKE '%{code}%';")
     colnames = [desc[0] for desc in cur.description]
     # Retrieve query results
     result = cur.fetchall()
@@ -24,6 +24,10 @@ def fetch_db_query(conn: object, code: str, location: str, valid: bool):
     
     """Upate Query"""
     ids = tuple(df['id'].to_list()[:-1]) # Leave the last image because of the unavailable error at home assistant
+
+    if len(ids)==0:
+        # No areas to update
+        return None, None
     
     if valid is True:
         """
@@ -52,10 +56,10 @@ def fetch_db_grow_id(conn, cam_code, location):
     cur = conn.cursor()
     # Execute a query
     query_grow_id = f"SELECT grow_id FROM predict_harvest \
-    WHERE begin_grow = (SELECT max(begin_grow) FROM predict_harvest WHERE \
-    location_id = (SELECT location_id FROM locations WHERE location = '{location}') AND \
-    cam_code = '{cam_code}');"
-    
+WHERE begin_grow = (SELECT max(begin_grow) FROM predict_harvest WHERE \
+location_id = (SELECT location_id FROM locations WHERE location = '{location}') AND \
+cam_code = '{cam_code}');"
+
     cur.execute(query_grow_id)
 
     # Retrieve query results

@@ -64,7 +64,9 @@ async def create_item(cam_code: str, location: str):
 
     # Allocate batch (Ignore data after harvest and before transplat.)
     _, query_u  = fetch_db_query(conn, cam_code, location, valid=False)
-    result_batch = update_db(conn, query_u)
+
+    if query_u is not None:
+        result_batch = update_db(conn, query_u)
 
     query_predict_harvest = f"INSERT INTO predict_harvest(location_id, cam_code) \
 VALUES ((SELECT location_id FROM locations WHERE location = '{location}'),'{cam_code}');"
