@@ -35,7 +35,7 @@ async def predict_harvest(cam_code: str, location: str, begin_grow_state:float |
 left_days={left_days} WHERE grow_id={grow_id};"
 
     result_predict_harvest = update_db(conn, query_predict_harvest)
-    return {'state': 'successful', 'return after update_harvest': result_predict_harvest}
+    return {'state': 'successful', 'return after update_harvest': result_predict_harvestm, 'value':left_days}
 
 
 @app.get("/batch_done/{location}/{cam_code}")
