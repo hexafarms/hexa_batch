@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 import psycopg2
-from .database import update_db, fetch_db, fetch_db_begin_grow, fetch_db_grow_id
+from .database import update_db, fetch_db_query, fetch_db_grow_id
 from .compute import compute_left_days
 import yaml
 
@@ -21,14 +21,12 @@ async def predict_harvest(cam_code: str, location: str, begin_grow_state:float |
     conn = psycopg2.connect(
         f"dbname={setup['dbname']} user={setup['user']} host={setup['host']} password={setup['password']}"
         )
-    conn.set_session(readonly=False)
+    conn.set_session(autocommit=True, readonly=False)
 
     #TODO: compute full_grow_cycle based on the species
     #TODO: compute begin_grow_state based on the area
     
     left_days = compute_left_days(conn, cam_code, location)
-
-    begin_grow, _ = fetch_db_begin_grow(conn, cam_code, location)
 
     grow_id = fetch_db_grow_id(conn, cam_code, location)
 
@@ -49,7 +47,7 @@ async def create_item(cam_code: str, location: str):
     conn.set_session(readonly=False)
 
     # Allocate batch
-    query_i, query_u  = fetch_db(conn, cam_code, location, valid=True)
+    query_i, query_u  = fetch_db_query(conn, cam_code, location, valid=True)
     result_i = update_db(conn, query_i)
     result_u = update_db(conn, query_u)
     conn.commit()
@@ -66,7 +64,7 @@ async def create_item(cam_code: str, location: str):
     conn.set_session(readonly=False)
 
     # Allocate batch (Ignore data after harvest and before transplat.)
-    _, query_u  = fetch_db(conn, cam_code, location, valid=False)
+    _, query_u  = fetch_db_query(conn, cam_code, location, valid=False)
     result_batch = update_db(conn, query_u)
     conn.commit()
 
