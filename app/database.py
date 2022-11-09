@@ -74,7 +74,7 @@ def fetch_db_begin_grow(conn: object, cam_code: str, location: str):
     # Open a cursor to perform database operations
     cur = conn.cursor()
     # Execute a query
-    query_begin_grow = f"SELECT begin_grow, full_grow_cycle FROM predict_harvest WHERE location_id = (SELECT location_id FROM locations WHERE location = '{location}') AND cam_code = '{cam_code}' AND \
+    query_begin_grow = f"SELECT begin_grow, full_grow_cycle, begin_grow_state FROM predict_harvest WHERE location_id = (SELECT location_id FROM locations WHERE location = '{location}') AND cam_code = '{cam_code}' AND \
 begin_grow = (SELECT begin_grow FROM predict_harvest WHERE location_id = (SELECT location_id FROM locations WHERE location = '{location}') \
 AND cam_code = '{cam_code}' ORDER BY begin_grow DESC LIMIT 1);"
     
@@ -83,5 +83,5 @@ AND cam_code = '{cam_code}' ORDER BY begin_grow DESC LIMIT 1);"
     # Retrieve query results
     result = cur.fetchall()
 
-    begin_grow, full_grow_cycle = result[0]
-    return begin_grow, full_grow_cycle  
+    begin_grow, full_grow_cycle, begin_grow_state = result[0]
+    return begin_grow, full_grow_cycle, begin_grow_state
