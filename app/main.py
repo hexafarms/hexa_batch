@@ -44,13 +44,12 @@ async def create_item(cam_code: str, location: str):
     conn = psycopg2.connect(
         f"dbname={setup['dbname']} user={setup['user']} host={setup['host']} password={setup['password']}"
         )
-    conn.set_session(readonly=False)
+    conn.set_session(autocommit=True, readonly=False)
 
     # Allocate batch
     query_i, query_u  = fetch_db_query(conn, cam_code, location, valid=True)
     result_i = update_db(conn, query_i)
     result_u = update_db(conn, query_u)
-    conn.commit()
         
     return {'state': 'successful', 'return after insert': result_i, 'return after update': result_u}
 
@@ -61,12 +60,11 @@ async def create_item(cam_code: str, location: str):
     conn = psycopg2.connect(
         f"dbname={setup['dbname']} user={setup['user']} host={setup['host']} password={setup['password']}"
         )
-    conn.set_session(readonly=False)
+    conn.set_session(autocommit=True, readonly=False)
 
     # Allocate batch (Ignore data after harvest and before transplat.)
     _, query_u  = fetch_db_query(conn, cam_code, location, valid=False)
     result_batch = update_db(conn, query_u)
-    conn.commit()
 
     query_predict_harvest = f"INSERT INTO predict_harvest(location_id, cam_code) \
 VALUES ((SELECT location_id FROM locations WHERE location = '{location}'),'{cam_code}');"
